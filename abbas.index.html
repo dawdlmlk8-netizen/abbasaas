@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Particle Text Animation</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg1: #0b0716;
+      --bg2: #171127;
+      --line: rgba(255,255,255,0.12);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.72);
+      --green: #5cff88;
+      --purple: #7b5cff;
+      --cyan: #42e9f5;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top, #22183d 0%, #120d22 35%, #090611 100%);
+      color: var(--text);
+      overflow: hidden;
+      min-height: 100vh;
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .frame {
+      position: relative;
+      z-index: 5;
+      width: min(1200px, calc(100% - 32px));
+      margin: 20px auto;
+      border: 2px solid rgba(255,255,255,0.25);
+      padding: 22px;
+      background: rgba(255,255,255,0.02);
+      backdrop-filter: blur(4px);
+    }
+
+    .title {
+      margin-bottom: 18px;
+    }
+
+    .title h1 {
+      font-size: clamp(28px, 5vw, 58px);
+      line-height: 1.05;
+      color: var(--green);
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .title h2 {
+      margin-top: 8px;
+      font-size: clamp(22px, 4vw, 40px);
+      color: white;
+      font-weight: 500;
+    }
+
+    .preview {
+      position: relative;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      height: min(52vh, 460px);
+      min-height: 300px;
+      background: rgba(0,0,0,0.18);
+      overflow: hidden;
+    }
+
+    .controls-wrap {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .card {
+      border: 2px solid rgba(255,255,255,0.25);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      padding: 16px;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .dot.red { background: #ff5f56; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #27c93f; }
+
+    .label {
+      margin-left: 8px;
+      color: rgba(255,255,255,0.8);
+      font-size: 14px;
+    }
+
+    .section-title {
+      color: #d7c5ff;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(0,0,0,0.35);
+      color: white;
+      outline: none;
+      font-size: 16px;
+    }
+
+    input[type="text"]::placeholder {
+      color: rgba(255,255,255,0.45);
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      padding: 12px 18px;
+      border-radius: 14px;
+      color: white;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, var(--purple), #5a3ff0);
+    }
+
+    .secondary {
+      background: linear-gradient(135deg, #30364a, #1d2235);
+    }
+
+    .accent {
+      background: linear-gradient(135deg, #00bcd4, #5c7cff);
+    }
+
+    .code-look {
+      font-family: Consolas, Monaco, monospace;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #bfe8ff;
+      white-space: pre-line;
+      opacity: 0.92;
+    }
+
+    .code-look .pink { color: #ff7edb; }
+    .code-look .green { color: #73ffb2; }
+    .code-look .purple { color: #b494ff; }
+    .code-look .white { color: #ffffff; }
+
+    .footer-note {
+      margin-top: 14px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.65);
+    }
+
+    @media (max-width: 900px) {
+      .controls-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .frame {
+        width: calc(100% - 20px);
+        margin: 10px auto;
+        padding: 14px;
+      }
+
+      .preview {
+        height: 46vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div class="frame">
+    <div class="title">
+      <h1>Particle to Text Animation</h1>
+      <h2>Using HTML CSS & JS</h2>
+    </div>
+
+    <div class="preview"></div>
+
+    <div class="controls-wrap">
+      <div class="card">
+        <div class="window-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="label">controls.js</span>
+        </div>
+
+        <div class="section-title">اكتب النص هنا وخليه يتحول إلى particles</div>
+
+        <div class="input-group">
+          <input id="textInput" type="text" maxlength="22" placeholder="اكتب مثلاً: Follow me" value="Follow me" />
+
+          <div class="buttons">
+            <button class="primary" id="applyBtn">Apply Text</button>
+            <button class="accent" id="explodeBtn">Explode</button>
+            <button class="secondary" id="rebuildBtn">Rebuild</button>
+          </div>
+        </div>
+
+        <div class="footer-note">
+          حرك الماوس داخل الصفحة حتى تشوف التفاعل.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="window-dots">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="label">style.css</span>
+        </div>
+
+        <div class="code-look"><span class="pink">body</span> {
+  <span class="green">background</span>: <span class="white">dark gradient</span>;
+  <span class="green">overflow</span>: <span class="white">hidden</span>;
+  <span class="green">color</span>: <span class="white">white</span>;
+}
+
+<span class="pink">#canvas</span> {
+  <span class="green">position</span>: <span class="white">fixed</span>;
+  <span class="green">inset</span>: <span class="white">0</span>;
+}
+
+<span class="pink">button</span> {
+  <span class="green">border-radius</span>: <span class="purple">14px</span>;
+  <span class="green">transition</span>: <span class="white">0.18s ease</span>;
+}</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    const textInput = document.getElementById("textInput");
+    const applyBtn = document.getElementById("applyBtn");
+    const explodeBtn = document.getElementById("explodeBtn");
+    const rebuildBtn = document.getElementById("rebuildBtn");
+
+    let particles = [];
+    let animationId;
+    let mouse = {
+      x: -9999,
+      y: -9999,
+      radius: 110
+    };
+
+    const config = {
+      gap: 4,
+      ease: 0.07,
+      particleSize: 2.2
+    };
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      buildText(textInput.value || "Follow me");
+    }
+
+    class Particle {
+      constructor(targetX, targetY, color) {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.baseX = targetX;
+        this.baseY = targetY;
+        this.size = config.particleSize;
+        this.color = color;
+        this.density = Math.random() * 22 + 2;
+        this.vx = 0;
+        this.vy = 0;
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 10;
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      update() {
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+        if (dist < mouse.radius) {
+          const force = (mouse.radius - dist) / mouse.radius;
+          const angle = Math.atan2(dy, dx);
+          const repelX = Math.cos(angle) * force * this.density * 0.9;
+          const repelY = Math.sin(angle) * force * this.density * 0.9;
+
+          this.x -= repelX;
+          this.y -= repelY;
+        }
+
+        this.x += (this.baseX - this.x) * config.ease;
+        this.y += (this.baseY - this.y) * config.ease;
+      }
+    }
+
+    function getResponsiveFontSize(text) {
+      const width = canvas.width;
+      if (width < 500) return Math.min(62, Math.max(36, width / Math.max(text.length * 0.42, 3)));
+      if (width < 900) return Math.min(96, Math.max(50, width / Math.max(text.length * 0.32, 3)));
+      return Math.min(150, Math.max(70, width / Math.max(text.length * 0.18, 3)));
+    }
+
+    function buildText(text) {
+      const safeText = (text || "Follow me").trim().slice(0, 22) || "Follow me";
+      particles = [];
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const fontSize = getResponsiveFontSize(safeText);
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `800 ${fontSize}px Arial`;
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2 - 20;
+
+      ctx.fillText(safeText, centerX, centerY);
+
+      const textWidth = ctx.measureText(safeText).width;
+      const startX = Math.max(0, centerX - textWidth / 2 - 40);
+      const startY = Math.max(0, centerY - fontSize / 1.2 - 40);
+      const sampleW = Math.min(canvas.width - startX, textWidth + 80);
+      const sampleH = Math.min(canvas.height - startY, fontSize * 1.6 + 80);
+
+      const imageData = ctx.getImageData(startX, startY, sampleW, sampleH);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < imageData.height; y += config.gap) {
+        for (let x = 0; x < imageData.width; x += config.gap) {
+          const index = (y * imageData.width + x) * 4;
+          const alpha = imageData.data[index + 3];
+
+          if (alpha > 140) {
+            const hueChoice = Math.random();
+            let color = "#7c6cff";
+
+            if (hueChoice < 0.34) color = "#7c6cff";
+            else if (hueChoice < 0.68) color = "#43e7ff";
+            else color = "#b79cff";
+
+            particles.push(new Particle(startX + x, startY + y, color));
+          }
+        }
+      }
+    }
+
+    function connectParticles() {
+      for (let a = 0; a < particles.length; a++) {
+        for (let b = a + 1; b < particles.length; b++) {
+          const dx = particles[a].x - particles[b].x;
+          const dy = particles[a].y - particles[b].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < 18) {
+            ctx.strokeStyle = "rgba(130, 120, 255, 0.08)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(particles[a].x, particles[a].y);
+            ctx.lineTo(particles[b].x, particles[b].y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (const particle of particles) {
+        particle.update();
+        particle.draw();
+      }
+
+      connectParticles();
+      animationId = requestAnimationFrame(animate);
+    }
+
+    function explodeParticles() {
+      for (const p of particles) {
+        p.x += (Math.random() - 0.5) * 700;
+        p.y += (Math.random() - 0.5) * 500;
+      }
+    }
+
+    applyBtn.addEventListener("click", () => {
+      buildText(textInput.value);
+    });
+
+    rebuildBtn.addEventListener("click", () => {
+      buildText(textInput.value);
+    });
+
+    explodeBtn.addEventListener("click", () => {
+      explodeParticles();
+    });
+
+    textInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        buildText(textInput.value);
+      }
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    window.addEventListener("touchmove", (e) => {
+      if (e.touches.length > 0) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    window.addEventListener("mouseleave", () => {
+      mouse.x = -9999;
+      mouse.y = -9999;
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+
+    resizeCanvas();
+    cancelAnimationFrame(animationId);
+    animate();
+  </script>
+</body>
+</html>
